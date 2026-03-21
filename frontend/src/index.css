@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Override Leaflet z-index to work with our sidebar */
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 900;
+}
+
+.leaflet-popup-pane {
+  z-index: 950;
+}
