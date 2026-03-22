@@ -1,5 +1,7 @@
 # HDB Cats 🐱
 
+**GitHub:** https://github.com/NAMU1105/hdb-cats
+
 A community web-app for Singapore residents to spot and share photos of HDB estate cats on an interactive Singapore map.
 
 ## Stack
