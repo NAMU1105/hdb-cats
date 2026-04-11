@@ -4,13 +4,30 @@ import { ddb, PK, TABLE_NAME } from '../lib/dynamo'
 import { err, ok, options } from '../lib/response'
 import type { CatItem, CatListItem } from '../types/index'
 
+const CURSOR_ALLOWED_KEYS = new Set(['PK', 'SK', 'town', 'uploadedAt'])
+
+function parseCursor(raw: string): Record<string, string | number> | undefined {
+  try {
+    const decoded = JSON.parse(Buffer.from(raw, 'base64').toString())
+    if (typeof decoded !== 'object' || decoded === null || Array.isArray(decoded)) return undefined
+    for (const [k, v] of Object.entries(decoded)) {
+      if (!CURSOR_ALLOWED_KEYS.has(k)) return undefined
+      if (typeof v !== 'string' && typeof v !== 'number') return undefined
+    }
+    return decoded as Record<string, string | number>
+  } catch {
+    return undefined
+  }
+}
+
 export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> = async (event) => {
   if (event.requestContext.http.method === 'OPTIONS') return options()
 
   const qs = event.queryStringParameters ?? {}
   const town = qs.town
   const limit = Math.min(parseInt(qs.limit ?? '200', 10), 500)
-  const cursor = qs.cursor ? JSON.parse(Buffer.from(qs.cursor, 'base64').toString()) as Record<string, unknown> : undefined
+  const cursor = qs.cursor ? parseCursor(qs.cursor) : undefined
+  if (qs.cursor && !cursor) return err('Invalid cursor', 400)
 
   let result
   if (town) {

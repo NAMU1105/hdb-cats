@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Handler } from 'a
 import { ulid } from 'ulid'
 import { BUCKET, buildCdnUrl, createPresignedPutUrl } from '../lib/s3'
 import { err, ok, options } from '../lib/response'
+import { verifyGoogleToken } from '../lib/auth'
 
 interface RequestBody {
   filename: string
@@ -13,6 +14,9 @@ const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/h
 
 export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> = async (event) => {
   if (event.requestContext.http.method === 'OPTIONS') return options()
+
+  const user = await verifyGoogleToken(event.headers['authorization'])
+  if (!user) return err('Unauthorized', 401)
 
   let body: RequestBody
   try {

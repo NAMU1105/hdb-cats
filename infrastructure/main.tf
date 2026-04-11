@@ -68,4 +68,5 @@ module "api" {
   allowed_origin     = var.frontend_domain
   admin_api_key      = var.admin_api_key
   aws_region         = var.aws_region
+  google_client_id   = var.google_client_id
 }

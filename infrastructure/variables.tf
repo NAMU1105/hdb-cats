@@ -28,3 +28,8 @@ variable "admin_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "google_client_id" {
+  description = "Google OAuth 2.0 client ID for verifying user ID tokens"
+  type        = string
+}

@@ -9,7 +9,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
   if (event.requestContext.http.method === 'OPTIONS') return options()
 
   // Simple API key guard
-  if (ADMIN_KEY && event.headers['x-admin-key'] !== ADMIN_KEY) {
+  if (!ADMIN_KEY || event.headers['x-admin-key'] !== ADMIN_KEY) {
     return err('Forbidden', 403)
   }
 

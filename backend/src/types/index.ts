@@ -14,6 +14,7 @@ export interface CatItem {
   thumbUrl: string
   uploadedAt: string
   status: 'active' | 'flagged' | 'deleted'
+  userId: string
 }
 
 export interface CatPublic {

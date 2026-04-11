@@ -31,17 +31,19 @@ export async function fetchCat(id: string): Promise<Cat> {
   return request<Cat>(`/cats/${id}`)
 }
 
-export async function getUploadUrl(payload: UploadUrlRequest): Promise<UploadUrlResponse> {
+export async function getUploadUrl(payload: UploadUrlRequest, token: string): Promise<UploadUrlResponse> {
   return request<UploadUrlResponse>('/upload-url', {
     method: 'POST',
     body: JSON.stringify(payload),
+    headers: { Authorization: `Bearer ${token}` },
   })
 }
 
-export async function createCat(payload: CreateCatRequest): Promise<Cat> {
+export async function createCat(payload: CreateCatRequest, token: string): Promise<Cat> {
   return request<Cat>('/cats', {
     method: 'POST',
     body: JSON.stringify(payload),
+    headers: { Authorization: `Bearer ${token}` },
   })
 }
 

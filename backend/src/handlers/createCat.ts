@@ -3,6 +3,7 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb'
 import { ddb, PK, TABLE_NAME } from '../lib/dynamo'
 import { buildCdnUrl } from '../lib/s3'
 import { err, ok, options } from '../lib/response'
+import { verifyGoogleToken } from '../lib/auth'
 import { isWithinSingapore } from '../types/index'
 import type { CatItem, CatPublic } from '../types/index'
 
@@ -20,6 +21,9 @@ interface RequestBody {
 
 export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> = async (event) => {
   if (event.requestContext.http.method === 'OPTIONS') return options()
+
+  const user = await verifyGoogleToken(event.headers['authorization'])
+  if (!user) return err('Unauthorized', 401)
 
   let body: RequestBody
   try {
@@ -57,6 +61,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
     thumbUrl: buildCdnUrl(thumbKey),
     uploadedAt: now,
     status: 'active',
+    userId: user.userId,
   }
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }))

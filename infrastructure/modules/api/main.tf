@@ -13,6 +13,7 @@ locals {
     CLOUDFRONT_DOMAIN   = var.cloudfront_domain
     ALLOWED_ORIGIN      = var.allowed_origin
     ADMIN_API_KEY       = var.admin_api_key
+    GOOGLE_CLIENT_ID    = var.google_client_id
     AWS_NODEJS_CONNECTION_REUSE_ENABLED = "1"
   }
 }
@@ -109,6 +110,12 @@ resource "aws_lambda_function" "delete_cat" {
   environment { variables = local.env_vars }
 }
 
+# CloudWatch Log Group for API Gateway access logs
+resource "aws_cloudwatch_log_group" "api_gw" {
+  name              = "/aws/apigateway/${var.project}-${var.environment}"
+  retention_in_days = 30
+}
+
 # API Gateway HTTP API
 resource "aws_apigatewayv2_api" "main" {
   name          = "${var.project}-api-${var.environment}"
@@ -117,7 +124,7 @@ resource "aws_apigatewayv2_api" "main" {
   cors_configuration {
     allow_origins = [var.allowed_origin == "*" ? "*" : var.allowed_origin, "http://localhost:5173"]
     allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
-    allow_headers = ["Content-Type", "X-Admin-Key"]
+    allow_headers = ["Content-Type", "Authorization", "X-Admin-Key"]
     max_age       = 3600
   }
 }
@@ -130,6 +137,21 @@ resource "aws_apigatewayv2_stage" "v1" {
   default_route_settings {
     throttling_burst_limit = 100
     throttling_rate_limit  = 50
+  }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      responseLength = "$context.responseLength"
+      sourceIp       = "$context.identity.sourceIp"
+      userAgent      = "$context.identity.userAgent"
+      errorMessage   = "$context.error.message"
+    })
   }
 }
 

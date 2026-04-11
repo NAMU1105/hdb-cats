@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { createCat, getUploadUrl, uploadToS3 } from '../api/client'
 import type { Cat, UploadStep } from '../types'
 import { optimizeImages } from '../utils/imageOptimize'
+import { useAuth } from '../contexts/AuthContext'
 
 interface UploadState {
   step: UploadStep
@@ -30,6 +31,7 @@ const INITIAL_STATE: UploadState = {
 }
 
 export function useUpload(onSuccess: (cat: Cat) => void) {
+  const { user } = useAuth()
   const [state, setState] = useState<UploadState>(INITIAL_STATE)
 
   const updateState = useCallback((partial: Partial<UploadState>) => {
@@ -71,6 +73,10 @@ export function useUpload(onSuccess: (cat: Cat) => void) {
   const submit = useCallback(async () => {
     const { file, location, title, hdbBlock, town, description } = state
     if (!file || !location || !title.trim()) return
+    if (!user) {
+      updateState({ step: 'error', error: 'Please sign in to upload' })
+      return
+    }
 
     updateState({ step: 'uploading', error: null, progress: 0 })
 
@@ -81,11 +87,10 @@ export function useUpload(onSuccess: (cat: Cat) => void) {
 
       // Step 2: get presigned URLs
       updateState({ progress: 25 })
-      const { uploadUrl, thumbUploadUrl, imageKey, thumbKey, catId } = await getUploadUrl({
-        filename: file.name,
-        contentType,
-        fileSizeBytes: original.size,
-      })
+      const { uploadUrl, thumbUploadUrl, imageKey, thumbKey, catId } = await getUploadUrl(
+        { filename: file.name, contentType, fileSizeBytes: original.size },
+        user.credential,
+      )
 
       // Step 3: upload original
       updateState({ progress: 40 })
@@ -97,17 +102,20 @@ export function useUpload(onSuccess: (cat: Cat) => void) {
 
       // Step 5: save metadata
       updateState({ progress: 90 })
-      const cat = await createCat({
-        catId,
-        imageKey,
-        thumbKey,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        hdbBlock: hdbBlock.trim() || undefined,
-        town: town || undefined,
-        latitude: location[0],
-        longitude: location[1],
-      })
+      const cat = await createCat(
+        {
+          catId,
+          imageKey,
+          thumbKey,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          hdbBlock: hdbBlock.trim() || undefined,
+          town: town || undefined,
+          latitude: location[0],
+          longitude: location[1],
+        },
+        user.credential,
+      )
 
       updateState({ progress: 100, step: 'success' })
       onSuccess(cat)

@@ -10,3 +10,4 @@ variable "admin_api_key" {
   sensitive = true
 }
 variable "aws_region" { type = string }
+variable "google_client_id" { type = string }

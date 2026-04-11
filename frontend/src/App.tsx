@@ -3,11 +3,14 @@ import type { Cat } from './types'
 import { SingaporeMap } from './components/Map/SingaporeMap'
 import { CatDetailSidebar } from './components/Sidebar/CatDetailSidebar'
 import { UploadModal } from './components/Upload/UploadModal'
+import { LoginButton } from './components/Auth/LoginButton'
 import { useCats } from './hooks/useCats'
 import { useSelectedCat } from './hooks/useSelectedCat'
 import { useUpload } from './hooks/useUpload'
+import { useAuth } from './contexts/AuthContext'
 
 export default function App() {
+  const { user } = useAuth()
   const { cats, loading: catsLoading, addCat } = useCats()
   const { selectedCat, loadingCat, selectCat, clearSelectedCat } = useSelectedCat()
 
@@ -59,13 +62,16 @@ export default function App() {
               {cats.length} {cats.length === 1 ? 'cat' : 'cats'} spotted
             </div>
           )}
-          <button
-            onClick={upload.openModal}
-            className="flex items-center gap-1.5 bg-white text-red-600 px-3 py-1.5 rounded-full text-sm font-bold hover:bg-red-50 transition-colors shadow-sm"
-          >
-            <span>+</span>
-            <span>Spot a Cat</span>
-          </button>
+          <LoginButton />
+          {user && (
+            <button
+              onClick={upload.openModal}
+              className="flex items-center gap-1.5 bg-white text-red-600 px-3 py-1.5 rounded-full text-sm font-bold hover:bg-red-50 transition-colors shadow-sm"
+            >
+              <span>+</span>
+              <span>Spot a Cat</span>
+            </button>
+          )}
         </div>
       </header>
 
