@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Frontend npm dependencies
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, frontend]
+    # Group all non-major updates into a single PR to reduce noise
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+
+  # Backend npm dependencies
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, backend]
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+
+  # GitHub Actions — keep workflow action versions up to date
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, ci]
