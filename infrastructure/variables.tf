@@ -33,3 +33,9 @@ variable "google_client_id" {
   description = "Google OAuth 2.0 client ID for verifying user ID tokens"
   type        = string
 }
+
+variable "github_repo" {
+  description = "GitHub repo in owner/repo format — scopes the OIDC trust policy to your repo only"
+  type        = string
+  default     = "NAMU1105/hdb-cats"
+}

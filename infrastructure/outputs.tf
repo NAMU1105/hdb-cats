@@ -28,3 +28,8 @@ output "s3_bucket_name" {
 output "dynamodb_table_name" {
   value = module.database.table_name
 }
+
+output "github_actions_role_arn" {
+  description = "Set this as AWS_DEPLOY_ROLE_ARN in GitHub Secrets"
+  value       = module.github_oidc.role_arn
+}

@@ -57,6 +57,14 @@ module "frontend" {
   environment = var.environment
 }
 
+module "github_oidc" {
+  source      = "./modules/github_oidc"
+  project     = var.project
+  environment = var.environment
+  aws_region  = var.aws_region
+  github_repo = var.github_repo
+}
+
 module "api" {
   source             = "./modules/api"
   project            = var.project

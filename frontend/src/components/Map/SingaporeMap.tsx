@@ -20,6 +20,7 @@ interface Props {
   pickingLocation: boolean
   pickedLocation: [number, number] | null
   onLocationPick: (lat: number, lng: number) => void
+  onMapClick?: (lat: number, lng: number) => void
 }
 
 export function SingaporeMap({
@@ -28,6 +29,7 @@ export function SingaporeMap({
   pickingLocation,
   pickedLocation,
   onLocationPick,
+  onMapClick,
 }: Props) {
   return (
     <MapContainer
@@ -58,6 +60,7 @@ export function SingaporeMap({
         location={pickedLocation}
         onLocationPick={onLocationPick}
         active={pickingLocation}
+        onMapClick={onMapClick}
       />
     </MapContainer>
   )

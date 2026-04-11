@@ -42,6 +42,14 @@ export function useUpload(onSuccess: (cat: Cat) => void) {
     updateState({ step: 'picking-image' })
   }, [updateState])
 
+  // Called when the user clicks directly on the map — location is pre-set
+  const openModalAtLocation = useCallback(
+    (lat: number, lng: number) => {
+      updateState({ step: 'picking-image', location: [lat, lng] })
+    },
+    [updateState],
+  )
+
   const closeModal = useCallback(() => {
     if (state.previewUrl) URL.revokeObjectURL(state.previewUrl)
     setState(INITIAL_STATE)
@@ -51,9 +59,11 @@ export function useUpload(onSuccess: (cat: Cat) => void) {
     (file: File) => {
       if (state.previewUrl) URL.revokeObjectURL(state.previewUrl)
       const previewUrl = URL.createObjectURL(file)
-      updateState({ file, previewUrl, step: 'picking-location' })
+      // If the user clicked the map first, location is already set — skip straight to details
+      const nextStep = state.location ? 'filling-details' : 'picking-location'
+      updateState({ file, previewUrl, step: nextStep })
     },
-    [state.previewUrl, updateState],
+    [state.previewUrl, state.location, updateState],
   )
 
   const setLocation = useCallback(
@@ -136,6 +146,7 @@ export function useUpload(onSuccess: (cat: Cat) => void) {
   return {
     ...state,
     openModal,
+    openModalAtLocation,
     closeModal,
     setFile,
     setLocation,

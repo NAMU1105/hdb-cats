@@ -83,6 +83,7 @@ export default function App() {
           pickingLocation={upload.step === 'picking-location'}
           pickedLocation={upload.location}
           onLocationPick={upload.setLocation}
+          onMapClick={user ? upload.openModalAtLocation : undefined}
         />
 
         {/* Sidebar overlay */}
