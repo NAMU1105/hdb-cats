@@ -13,7 +13,8 @@ import { verifyGoogleToken } from '../../lib/auth'
 
 function getMockVerify() {
   // OAuth2Client is a mock constructor — grab the verifyIdToken off the first instance
-  return (OAuth2Client as ReturnType<typeof vi.fn>).mock.results[0].value
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (OAuth2Client as unknown as any).mock.results[0].value
     .verifyIdToken as ReturnType<typeof vi.fn>
 }
 
