@@ -38,7 +38,7 @@ export function LoginButton() {
       shape="pill"
       size="medium"
       text="signin_with"
-      theme="filled_white"
+      theme="outline"
     />
   )
 }
