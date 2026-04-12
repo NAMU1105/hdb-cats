@@ -176,7 +176,9 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-red-600 text-white">
-        <h2 className="font-bold text-lg truncate">{headerTitle}</h2>
+        <h2 className="font-bold text-lg truncate">
+          {mode === 'view' && cat ? `🐱 ${cat.title}` : headerTitle}
+        </h2>
         <div className="flex items-center gap-1 ml-2 shrink-0">
           {cat && mode === 'view' && (
             <button
