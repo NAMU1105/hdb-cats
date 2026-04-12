@@ -39,3 +39,17 @@ variable "github_repo" {
   type        = string
   default     = "NAMU1105/hdb-cats"
 }
+
+
+variable "app_admin_id" {
+  description = "Administrator user ID for the app (set via TF_VAR_app_admin_id env var) to limit user access to the services"
+  type        = string
+  default     = "prod-admin-namu"
+}
+
+variable "app_admin_pw" {
+  description = "Administrator user password for the app (set via TF_VAR_app_admin_pw env var) to limit user access to the services"
+  type        = string
+  default     = "prod-admin-namu"
+}
+

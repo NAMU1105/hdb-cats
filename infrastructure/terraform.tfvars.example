@@ -1,5 +1,0 @@
-project         = "hdb-cats"
-environment     = "prod"
-aws_region      = "ap-southeast-1"
-frontend_domain = "https://hdbcats.sg"
-# admin_api_key is set via TF_VAR_admin_api_key environment variable (never commit this)
