@@ -79,15 +79,15 @@ export default function App() {
             </div>
           )}
           <LoginButton />
-          {user && (
-            <button
-              onClick={upload.openModal}
-              className="flex items-center gap-1.5 bg-white text-red-600 px-3 py-1.5 rounded-full text-sm font-bold hover:bg-red-50 transition-colors shadow-sm"
-            >
-              <span>+</span>
-              <span>Spot a Cat</span>
-            </button>
-          )}
+          <button
+            onClick={user ? upload.openModal : undefined}
+            disabled={!user}
+            title={!user ? 'Sign in to spot a cat' : undefined}
+            className="flex items-center gap-1.5 bg-white text-red-600 px-3 py-1.5 rounded-full text-sm font-bold hover:bg-red-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+          >
+            <span>+</span>
+            <span>Spot a Cat</span>
+          </button>
         </div>
       </header>
 
