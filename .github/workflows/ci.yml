@@ -4,11 +4,13 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+    branches: [main, develop]
 
 jobs:
   backend:
     name: Backend — typecheck & test
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v6
 
@@ -32,6 +34,7 @@ jobs:
   frontend:
     name: Frontend — typecheck & test
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v6
 
@@ -79,6 +82,7 @@ jobs:
   tfsec:
     name: Terraform security scan (tfsec)
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v6
 
@@ -93,7 +97,7 @@ jobs:
     name: E2E tests (Playwright)
     runs-on: ubuntu-latest
     # E2E only runs on pushes to main, not every PR, to keep feedback fast
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.actor != 'dependabot[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v6
