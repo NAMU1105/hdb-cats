@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { Photo } from '../../types'
 
 interface Props {
@@ -25,9 +26,9 @@ export function PhotoLightbox({ photos, index, catTitle, onClose, onNavigate }: 
 
   if (!photo) return null
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[2000] bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Close */}
@@ -43,7 +44,7 @@ export function PhotoLightbox({ photos, index, catTitle, onClose, onNavigate }: 
 
       {/* Counter */}
       {total > 1 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/60 text-sm tabular-nums">
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/50 text-sm tabular-nums">
           {index + 1} / {total}
         </div>
       )}
@@ -52,7 +53,7 @@ export function PhotoLightbox({ photos, index, catTitle, onClose, onNavigate }: 
       {index > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); onNavigate(index - 1) }}
-          className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white transition-colors"
+          className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/60 hover:text-white transition-colors"
           aria-label="Previous"
         >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +66,7 @@ export function PhotoLightbox({ photos, index, catTitle, onClose, onNavigate }: 
       <img
         src={photo.cdnUrl}
         alt={catTitle}
-        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+        className="max-w-[90vw] max-h-[90vh] object-contain"
         onClick={(e) => e.stopPropagation()}
       />
 
@@ -73,7 +74,7 @@ export function PhotoLightbox({ photos, index, catTitle, onClose, onNavigate }: 
       {index < total - 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); onNavigate(index + 1) }}
-          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white transition-colors"
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/60 hover:text-white transition-colors"
           aria-label="Next"
         >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,10 +83,11 @@ export function PhotoLightbox({ photos, index, catTitle, onClose, onNavigate }: 
         </button>
       )}
 
-      {/* Date bottom */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-xs">
+      {/* Date */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/30 text-xs">
         {new Date(photo.uploadedAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
