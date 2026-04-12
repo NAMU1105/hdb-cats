@@ -1,5 +1,34 @@
 locals {
-  bucket_name = "${var.project}-frontend-${var.environment}"
+  bucket_name          = "${var.project}-frontend-${var.environment}"
+  enable_basic_auth    = var.basic_auth_credential != ""
+}
+
+# CloudFront Function for Basic Auth — applied to non-prod environments only.
+# Note: credentials are embedded in the function code (visible in AWS console).
+# This is intentional: the goal is to prevent casual discovery, not hardened security.
+resource "aws_cloudfront_function" "basic_auth" {
+  count   = local.enable_basic_auth ? 1 : 0
+  name    = "${var.project}-basic-auth-${var.environment}"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+
+  code = <<-EOF
+    function handler(event) {
+      var request = event.request;
+      var headers = request.headers;
+      var expected = "Basic ${var.basic_auth_credential}";
+      if (!headers.authorization || headers.authorization.value !== expected) {
+        return {
+          statusCode: 401,
+          statusDescription: "Unauthorized",
+          headers: {
+            "www-authenticate": { value: 'Basic realm="${var.environment}"' }
+          }
+        };
+      }
+      return request;
+    }
+  EOF
 }
 
 resource "aws_s3_bucket" "frontend" {
@@ -48,6 +77,14 @@ resource "aws_cloudfront_distribution" "frontend" {
     min_ttl     = 0
     default_ttl = 3600
     max_ttl     = 86400
+
+    dynamic "function_association" {
+      for_each = local.enable_basic_auth ? [1] : []
+      content {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.basic_auth[0].arn
+      }
+    }
   }
 
   # Assets (hashed filenames) — cache aggressively
