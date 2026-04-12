@@ -45,12 +45,17 @@ hdb-cats/
 - **Interactive Singapore map** centred on Singapore (OpenStreetMap tiles)
 - **Cat markers** clustered by proximity, each showing a circular thumbnail
 - **Click marker** → sidebar slides in with full photo and details
+- **Fullscreen photo viewer** — click any photo to open a fullscreen lightbox; navigate with arrow keys or buttons
+- **Multiple photos per spot** — any logged-in user can add more photos to an existing cat sighting
 - **Google login** — sign in with your Google account to submit sightings
 - **Click the map** → opens upload wizard with location pre-filled
 - **Spot a Cat** button → 3-step upload wizard (login required):
   1. Drop/select a photo (client-side optimisation to original + thumbnail)
   2. Click the map to pin the location
   3. Fill in title, HDB block (with OneMap autocomplete), town, description
+- **Like / unlike** — heart button on each sighting (login required); rate-limited to prevent spam
+- **Share** — share link button copies a direct URL (`?cat=<id>`) or triggers native share sheet on mobile
+- **Edit / Delete** — owners can edit metadata or delete their own sightings
 - Presigned S3 upload (images go directly from browser to S3, no size limit from Lambda)
 - Soft-delete with `X-Admin-Key` header for moderation
 
@@ -160,10 +165,13 @@ terraform apply
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET` | `/v1/cats` | — | List all active sightings (supports `?town=` filter) |
-| `GET` | `/v1/cats/{id}` | — | Get full details of a sighting |
+| `GET` | `/v1/cats/{id}` | optional Google ID token | Get full details; includes `likedByMe` when authenticated |
 | `POST` | `/v1/cats` | Google ID token | Save cat metadata after S3 upload |
-| `POST` | `/v1/upload-url` | Google ID token | Get presigned S3 PUT URLs |
-| `DELETE` | `/v1/cats/{id}` | `X-Admin-Key` header | Soft-delete (moderation) |
+| `PATCH` | `/v1/cats/{id}` | Google ID token (owner only) | Update title / description / location metadata |
+| `DELETE` | `/v1/cats/{id}` | Google ID token (owner) or `X-Admin-Key` | Soft-delete |
+| `POST` | `/v1/cats/{id}/photos` | Google ID token | Add a photo to an existing sighting |
+| `POST` | `/v1/cats/{id}/like` | Google ID token | Toggle like (rate-limited: 10 req/s, burst 20) |
+| `POST` | `/v1/upload-url` | Google ID token | Get presigned S3 PUT URLs (pass `catId` to add photo to existing cat) |
 
 ## Map Notes
 
