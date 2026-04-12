@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { updateCat, deleteCat, toggleLike, addCatPhoto, getUploadUrl, uploadToS3 } from '../../api/client'
+import { PhotoLightbox } from './PhotoLightbox'
 import type { Cat } from '../../types'
 
 interface Props {
@@ -42,6 +43,7 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
   const [photoIndex, setPhotoIndex] = useState(0)
   const [addingPhoto, setAddingPhoto] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
       setLikedByMe(cat.likedByMe ?? false)
       setPhotoIndex(0)
       setAddingPhoto(false)
+      setLightboxOpen(false)
     }
   }, [cat?.id])
 
@@ -221,7 +224,12 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
           <>
             {mode !== 'edit' && currentPhoto && (
               <div className="relative">
-                <img src={currentPhoto.cdnUrl} alt={cat.title} className="w-full aspect-square object-cover" />
+                <img
+                  src={currentPhoto.cdnUrl}
+                  alt={cat.title}
+                  className="w-full aspect-square object-cover cursor-zoom-in"
+                  onClick={() => setLightboxOpen(true)}
+                />
 
                 {/* Photo navigation — only shown when there are multiple photos */}
                 {photoCount > 1 && (
@@ -445,6 +453,17 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
                 {deleting ? 'Deleting…' : 'Confirm Delete'}
               </button>
             </div>
+          )}
+
+          {/* Lightbox */}
+          {lightboxOpen && (
+            <PhotoLightbox
+              photos={photos}
+              index={photoIndex}
+              catTitle={cat.title}
+              onClose={() => setLightboxOpen(false)}
+              onNavigate={(i) => { setPhotoIndex(i); }}
+            />
           )}
 
           {/* Hidden file input for adding photos */}
