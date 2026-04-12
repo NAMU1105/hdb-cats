@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { updateCat, deleteCat } from '../../api/client'
+import { updateCat, deleteCat, toggleLike } from '../../api/client'
 import type { Cat } from '../../types'
 
 interface Props {
@@ -34,6 +34,9 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
   const [form, setForm] = useState<EditForm>({ title: '', description: '', hdbBlock: '', town: '' })
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [liking, setLiking] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [likedByMe, setLikedByMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -46,6 +49,8 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
       })
       setMode('view')
       setError(null)
+      setLikeCount(cat.likeCount)
+      setLikedByMe(cat.likedByMe ?? false)
     }
   }, [cat?.id])
 
@@ -72,6 +77,20 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
       setError(e instanceof Error ? e.message : 'Failed to save')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleToggleLike = async () => {
+    if (!cat || !user || liking) return
+    setLiking(true)
+    try {
+      const result = await toggleLike(cat.id, user.credential)
+      setLikeCount(result.likeCount)
+      setLikedByMe(result.likedByMe)
+    } catch {
+      // silently fail — like is non-critical
+    } finally {
+      setLiking(false)
     }
   }
 
@@ -157,6 +176,32 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
                       <span>📅</span>
                       <span>Spotted {formatDate(cat.uploadedAt)}</span>
                     </div>
+                  </div>
+
+                  {/* Like button */}
+                  <div className="pt-1">
+                    <button
+                      onClick={handleToggleLike}
+                      disabled={!user || liking}
+                      title={user ? (likedByMe ? 'Unlike' : 'Like') : 'Sign in to like'}
+                      className={`flex items-center gap-1.5 text-sm font-medium transition-colors disabled:cursor-default
+                        ${likedByMe ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
+                    >
+                      <svg
+                        className={`w-5 h-5 transition-transform ${liking ? 'scale-90' : 'hover:scale-110'}`}
+                        fill={likedByMe ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
+                      <span>{likeCount}</span>
+                    </button>
                   </div>
                 </>
               )}

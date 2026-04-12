@@ -15,6 +15,7 @@ export interface CatItem {
   uploadedAt: string
   status: 'active' | 'flagged' | 'deleted'
   userId: string
+  likeCount?: number
 }
 
 export interface CatPublic {
@@ -30,6 +31,8 @@ export interface CatPublic {
   thumbUrl: string
   uploadedAt: string
   status: 'active' | 'flagged' | 'deleted'
+  likeCount: number
+  likedByMe?: boolean
 }
 
 export interface CatListItem {
