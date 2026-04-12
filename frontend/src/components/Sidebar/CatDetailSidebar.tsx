@@ -455,17 +455,6 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
             </div>
           )}
 
-          {/* Lightbox */}
-          {lightboxOpen && (
-            <PhotoLightbox
-              photos={photos}
-              index={photoIndex}
-              catTitle={cat.title}
-              onClose={() => setLightboxOpen(false)}
-              onNavigate={(i) => { setPhotoIndex(i); }}
-            />
-          )}
-
           {/* Hidden file input for adding photos */}
           <input
             ref={fileInputRef}
@@ -479,6 +468,17 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
             }}
           />
         </div>
+      )}
+
+      {/* Lightbox — outside sidebar DOM so z-index works correctly */}
+      {lightboxOpen && cat && (
+        <PhotoLightbox
+          photos={photos}
+          index={photoIndex}
+          catTitle={cat.title}
+          onClose={() => setLightboxOpen(false)}
+          onNavigate={setPhotoIndex}
+        />
       )}
     </div>
   )
