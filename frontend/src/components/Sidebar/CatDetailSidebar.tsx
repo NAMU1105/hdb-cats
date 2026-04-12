@@ -35,6 +35,7 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [liking, setLiking] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [likedByMe, setLikedByMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -80,6 +81,18 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
     }
   }
 
+  const handleShare = async () => {
+    if (!cat) return
+    const url = `${window.location.origin}${window.location.pathname}?cat=${cat.id}`
+    if (navigator.share) {
+      await navigator.share({ title: cat.title, text: `Check out this cat spotted in Singapore!`, url })
+    } else {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
   const handleToggleLike = async () => {
     if (!cat || !user || liking) return
     setLiking(true)
@@ -121,15 +134,34 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-red-600 text-white">
         <h2 className="font-bold text-lg truncate">{headerTitle}</h2>
-        <button
-          onClick={mode === 'edit' ? () => { setMode('view'); setError(null) } : onClose}
-          className="ml-2 p-1 rounded hover:bg-red-700 transition-colors"
-          aria-label={mode === 'edit' ? 'Cancel edit' : 'Close'}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1 ml-2 shrink-0">
+          {cat && mode === 'view' && (
+            <button
+              onClick={handleShare}
+              className="p-1 rounded hover:bg-red-700 transition-colors relative"
+              aria-label="Share"
+            >
+              {copied ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              )}
+            </button>
+          )}
+          <button
+            onClick={mode === 'edit' ? () => { setMode('view'); setError(null) } : onClose}
+            className="p-1 rounded hover:bg-red-700 transition-colors"
+            aria-label={mode === 'edit' ? 'Cancel edit' : 'Close'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Content */}
