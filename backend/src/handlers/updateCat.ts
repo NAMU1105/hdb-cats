@@ -3,7 +3,8 @@ import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
 import { ddb, PK, TABLE_NAME } from '../lib/dynamo'
 import { err, ok, options } from '../lib/response'
 import { verifyGoogleToken } from '../lib/auth'
-import type { CatItem, CatPublic } from '../types/index'
+import { toCatPublic } from '../lib/cat'
+import type { CatItem } from '../types/index'
 
 interface RequestBody {
   title?: string
@@ -102,20 +103,5 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
   )
 
   const updated = result.Attributes as CatItem
-  const response: CatPublic = {
-    id: updated.id,
-    title: updated.title,
-    description: updated.description,
-    hdbBlock: updated.hdbBlock,
-    town: updated.town,
-    latitude: updated.latitude,
-    longitude: updated.longitude,
-    imageKey: updated.imageKey,
-    cdnUrl: updated.cdnUrl,
-    thumbUrl: updated.thumbUrl,
-    uploadedAt: updated.uploadedAt,
-    status: updated.status,
-  }
-
-  return ok(response)
+  return ok(toCatPublic(updated))
 }

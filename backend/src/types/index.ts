@@ -1,3 +1,12 @@
+export interface Photo {
+  s3Key: string
+  thumbKey: string
+  cdnUrl: string
+  thumbUrl: string
+  uploadedAt: string
+  userId: string
+}
+
 export interface CatItem {
   PK: string
   SK: string
@@ -8,6 +17,7 @@ export interface CatItem {
   town?: string
   latitude: number
   longitude: number
+  // Legacy flat fields — kept for getCats list query (thumbUrl at top level)
   imageKey: string
   thumbKey: string
   cdnUrl: string
@@ -16,6 +26,7 @@ export interface CatItem {
   status: 'active' | 'flagged' | 'deleted'
   userId: string
   likeCount?: number
+  photos?: Photo[]
 }
 
 export interface CatPublic {
@@ -33,6 +44,7 @@ export interface CatPublic {
   status: 'active' | 'flagged' | 'deleted'
   likeCount: number
   likedByMe?: boolean
+  photos: Photo[]
 }
 
 export interface CatListItem {

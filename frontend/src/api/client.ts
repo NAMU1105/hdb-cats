@@ -7,6 +7,7 @@ import type {
   UploadUrlResponse,
 } from '../types'
 
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/v1'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -77,6 +78,14 @@ export async function updateCat(id: string, payload: UpdateCatRequest, token: st
 export async function deleteCat(id: string, token: string): Promise<void> {
   await request<void>(`/cats/${id}`, {
     method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function addCatPhoto(id: string, imageKey: string, thumbKey: string, token: string): Promise<Cat> {
+  return request<Cat>(`/cats/${id}/photos`, {
+    method: 'POST',
+    body: JSON.stringify({ imageKey, thumbKey }),
     headers: { Authorization: `Bearer ${token}` },
   })
 }

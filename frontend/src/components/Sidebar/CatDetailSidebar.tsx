@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { updateCat, deleteCat, toggleLike } from '../../api/client'
+import { updateCat, deleteCat, toggleLike, addCatPhoto, getUploadUrl, uploadToS3 } from '../../api/client'
 import type { Cat } from '../../types'
 
 interface Props {
@@ -39,6 +39,10 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
   const [likeCount, setLikeCount] = useState(0)
   const [likedByMe, setLikedByMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const [addingPhoto, setAddingPhoto] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (cat) {
@@ -52,6 +56,8 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
       setError(null)
       setLikeCount(cat.likeCount)
       setLikedByMe(cat.likedByMe ?? false)
+      setPhotoIndex(0)
+      setAddingPhoto(false)
     }
   }, [cat?.id])
 
@@ -120,6 +126,43 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
     }
   }
 
+  const handleAddPhotoFile = async (file: File) => {
+    if (!cat || !user) return
+    setAddingPhoto(true)
+    setError(null)
+    setUploadProgress(10)
+    try {
+      const urls = await getUploadUrl(
+        { filename: file.name, contentType: file.type, fileSizeBytes: file.size, catId: cat.id },
+        user.credential,
+      )
+      setUploadProgress(30)
+
+      // Generate thumb by resizing client-side using a canvas
+      const thumb = await resizeImage(file, 400)
+      setUploadProgress(40)
+
+      await uploadToS3(urls.uploadUrl, file, file.type)
+      setUploadProgress(70)
+      await uploadToS3(urls.thumbUploadUrl, thumb, file.type)
+      setUploadProgress(90)
+
+      const updated = await addCatPhoto(cat.id, urls.imageKey, urls.thumbKey, user.credential)
+      setUploadProgress(100)
+      onUpdated(updated)
+      setPhotoIndex(updated.photos.length - 1)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to upload photo')
+    } finally {
+      setAddingPhoto(false)
+      setUploadProgress(0)
+    }
+  }
+
+  const photos = cat?.photos ?? (cat ? [{ cdnUrl: cat.cdnUrl, thumbUrl: cat.thumbUrl, uploadedAt: cat.uploadedAt, userId: '', s3Key: '', thumbKey: '' }] : [])
+  const currentPhoto = photos[photoIndex]
+  const photoCount = photos.length
+
   const headerTitle = mode === 'edit' ? 'Edit Details' : (cat?.title ?? 'Loading…')
 
   return (
@@ -174,8 +217,39 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
 
         {cat && !loading && (
           <>
-            {mode !== 'edit' && (
-              <img src={cat.cdnUrl} alt={cat.title} className="w-full aspect-square object-cover" />
+            {mode !== 'edit' && currentPhoto && (
+              <div className="relative">
+                <img src={currentPhoto.cdnUrl} alt={cat.title} className="w-full aspect-square object-cover" />
+
+                {/* Photo navigation — only shown when there are multiple photos */}
+                {photoCount > 1 && (
+                  <>
+                    <button
+                      onClick={() => setPhotoIndex((i) => Math.max(0, i - 1))}
+                      disabled={photoIndex === 0}
+                      className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center disabled:opacity-0 transition-opacity"
+                      aria-label="Previous photo"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setPhotoIndex((i) => Math.min(photoCount - 1, i + 1))}
+                      disabled={photoIndex === photoCount - 1}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center disabled:opacity-0 transition-opacity"
+                      aria-label="Next photo"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                      {photoIndex + 1} / {photoCount}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
 
             <div className="p-4 space-y-3">
@@ -290,20 +364,42 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
       {/* Footer actions — only shown when logged in */}
       {cat && !loading && user && (
         <div className="border-t p-3">
+          {/* Add photo upload progress */}
+          {addingPhoto && (
+            <div className="mb-3 space-y-1">
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div
+                  className="bg-red-500 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center">Uploading photo… {uploadProgress}%</p>
+            </div>
+          )}
+
           {mode === 'view' && (
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <button
-                onClick={() => setMode('edit')}
-                className="flex-1 py-2 text-sm font-medium border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={addingPhoto}
+                className="w-full py-2 text-sm font-medium text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Edit
+                + Add Photo
               </button>
-              <button
-                onClick={() => { setMode('confirm-delete'); setError(null) }}
-                className="flex-1 py-2 text-sm font-medium text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors"
-              >
-                Delete
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMode('edit')}
+                  className="flex-1 py-2 text-sm font-medium border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => { setMode('confirm-delete'); setError(null) }}
+                  className="flex-1 py-2 text-sm font-medium text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           )}
 
@@ -344,8 +440,44 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
               </button>
             </div>
           )}
+
+          {/* Hidden file input for adding photos */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) void handleAddPhotoFile(file)
+              e.target.value = ''
+            }}
+          />
         </div>
       )}
     </div>
   )
+}
+
+async function resizeImage(file: File, maxSize: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('Canvas toBlob failed'))),
+        file.type,
+        0.85,
+      )
+    }
+    img.onerror = reject
+    img.src = url
+  })
 }

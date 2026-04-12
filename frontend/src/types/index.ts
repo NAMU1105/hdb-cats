@@ -1,3 +1,12 @@
+export interface Photo {
+  s3Key: string
+  thumbKey: string
+  cdnUrl: string
+  thumbUrl: string
+  uploadedAt: string
+  userId: string
+}
+
 export interface Cat {
   id: string
   title: string
@@ -13,6 +22,7 @@ export interface Cat {
   status: 'active' | 'flagged' | 'deleted'
   likeCount: number
   likedByMe?: boolean
+  photos: Photo[]
 }
 
 export interface CatListItem {
@@ -35,6 +45,7 @@ export interface UploadUrlRequest {
   filename: string
   contentType: string
   fileSizeBytes: number
+  catId?: string  // pass to add a photo to an existing cat
 }
 
 export interface UploadUrlResponse {

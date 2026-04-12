@@ -8,6 +8,7 @@ interface RequestBody {
   filename: string
   contentType: string
   fileSizeBytes: number
+  catId?: string  // if provided, generates keys under this existing cat (for adding photos)
 }
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic'])
@@ -25,7 +26,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
     return err('Invalid JSON body')
   }
 
-  const { filename, contentType, fileSizeBytes } = body
+  const { filename, contentType, fileSizeBytes, catId: existingCatId } = body
 
   if (!filename || !contentType || !fileSizeBytes) {
     return err('filename, contentType, and fileSizeBytes are required')
@@ -37,10 +38,17 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
     return err('fileSizeBytes must be between 1 and 10,000,000')
   }
 
-  const catId = ulid()
+  const catId = existingCatId ?? ulid()
+  const photoId = ulid()
   const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1]
-  const imageKey = `uploads/${catId}/original.${ext}`
-  const thumbKey = `uploads/${catId}/thumb.${ext}`
+
+  // New cats use uploads/${catId}/original.ext; additional photos use uploads/${catId}/${photoId}.ext
+  const imageKey = existingCatId
+    ? `uploads/${catId}/${photoId}.${ext}`
+    : `uploads/${catId}/original.${ext}`
+  const thumbKey = existingCatId
+    ? `uploads/${catId}/${photoId}_thumb.${ext}`
+    : `uploads/${catId}/thumb.${ext}`
 
   const [uploadUrl, thumbUploadUrl] = await Promise.all([
     createPresignedPutUrl(imageKey, contentType, fileSizeBytes),

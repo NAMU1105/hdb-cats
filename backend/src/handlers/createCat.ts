@@ -4,8 +4,9 @@ import { ddb, PK, TABLE_NAME } from '../lib/dynamo'
 import { buildCdnUrl } from '../lib/s3'
 import { err, ok, options } from '../lib/response'
 import { verifyGoogleToken } from '../lib/auth'
+import { toCatPublic } from '../lib/cat'
 import { isWithinSingapore } from '../types/index'
-import type { CatItem, CatPublic } from '../types/index'
+import type { CatItem } from '../types/index'
 
 interface RequestBody {
   catId: string
@@ -45,6 +46,9 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
   }
 
   const now = new Date().toISOString()
+  const cdnUrl = buildCdnUrl(imageKey)
+  const thumbUrl = buildCdnUrl(thumbKey)
+
   const item: CatItem = {
     PK,
     SK: `CAT#${catId}`,
@@ -57,29 +61,15 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
     longitude,
     imageKey,
     thumbKey,
-    cdnUrl: buildCdnUrl(imageKey),
-    thumbUrl: buildCdnUrl(thumbKey),
+    cdnUrl,
+    thumbUrl,
     uploadedAt: now,
     status: 'active',
     userId: user.userId,
+    photos: [{ s3Key: imageKey, thumbKey, cdnUrl, thumbUrl, uploadedAt: now, userId: user.userId }],
   }
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }))
 
-  const response: CatPublic = {
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    hdbBlock: item.hdbBlock,
-    town: item.town,
-    latitude: item.latitude,
-    longitude: item.longitude,
-    imageKey: item.imageKey,
-    cdnUrl: item.cdnUrl,
-    thumbUrl: item.thumbUrl,
-    uploadedAt: item.uploadedAt,
-    status: item.status,
-  }
-
-  return ok(response, 201)
+  return ok(toCatPublic(item), 201)
 }

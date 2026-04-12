@@ -37,7 +37,7 @@ jobs:
       - name: Update Lambda functions
         working-directory: backend/dist
         run: |
-          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike; do
+          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto; do
             zip -j ${handler}.zip ${handler}/index.js
             aws lambda update-function-code \
               --function-name hdb-cats-${handler}-dev \
@@ -72,7 +72,7 @@ jobs:
       - name: Update Lambda functions
         working-directory: backend/dist
         run: |
-          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike; do
+          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto; do
             zip -j ${handler}.zip ${handler}/index.js
             aws lambda update-function-code \
               --function-name hdb-cats-${handler}-uat \
@@ -153,7 +153,7 @@ jobs:
       - name: Update Lambda functions
         working-directory: backend/dist
         run: |
-          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike; do
+          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto; do
             zip -j ${handler}.zip ${handler}/index.js
             aws lambda update-function-code \
               --function-name hdb-cats-${handler}-prod \
