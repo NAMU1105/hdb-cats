@@ -56,6 +56,12 @@ resource "aws_cloudfront_distribution" "frontend" {
   comment             = "${var.project} frontend (${var.environment})"
   price_class         = "PriceClass_200"
 
+  # Ensures the distribution (which may hold a function_association) is updated
+  # before the function resource is destroyed when basic_auth is disabled.
+  # Without this, Terraform drops the implicit ARN reference when count=0 and
+  # may try to delete the function while the distribution still references it.
+  depends_on = [aws_cloudfront_function.basic_auth]
+
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id                = "s3-${local.bucket_name}"

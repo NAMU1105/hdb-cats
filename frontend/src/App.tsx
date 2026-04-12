@@ -11,8 +11,8 @@ import { useAuth } from './contexts/AuthContext'
 
 export default function App() {
   const { user } = useAuth()
-  const { cats, loading: catsLoading, addCat } = useCats()
-  const { selectedCat, loadingCat, selectCat, clearSelectedCat } = useSelectedCat()
+  const { cats, loading: catsLoading, addCat, removeCat, updateCatInList } = useCats()
+  const { selectedCat, loadingCat, selectCat, clearSelectedCat, updateSelectedCat } = useSelectedCat()
 
   const handleUploadSuccess = useCallback(
     (cat: Cat) => {
@@ -31,6 +31,22 @@ export default function App() {
   )
 
   const upload = useUpload(handleUploadSuccess)
+
+  const handleDeleted = useCallback(
+    (id: string) => {
+      removeCat(id)
+      clearSelectedCat()
+    },
+    [removeCat, clearSelectedCat],
+  )
+
+  const handleUpdated = useCallback(
+    (cat: Cat) => {
+      updateCatInList(cat)
+      updateSelectedCat(cat)
+    },
+    [updateCatInList, updateSelectedCat],
+  )
 
   const handleLocationFromSearch = useCallback(
     (lat: number, lng: number, block: string, town: string) => {
@@ -91,6 +107,8 @@ export default function App() {
           cat={selectedCat}
           loading={loadingCat}
           onClose={clearSelectedCat}
+          onDeleted={handleDeleted}
+          onUpdated={handleUpdated}
         />
       </div>
 

@@ -52,9 +52,10 @@ module "iam" {
 }
 
 module "frontend" {
-  source      = "../../modules/frontend"
-  project     = local.project
-  environment = local.environment
+  source                = "../../modules/frontend"
+  project               = local.project
+  environment           = local.environment
+  basic_auth_credential = var.basic_auth_credential
 }
 
 module "github_oidc" {

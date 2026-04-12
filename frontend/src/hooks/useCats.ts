@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCats } from '../api/client'
-import type { CatListItem } from '../types'
+import type { Cat, CatListItem } from '../types'
 
 export function useCats() {
   const [cats, setCats] = useState<CatListItem[]>([])
@@ -28,5 +28,17 @@ export function useCats() {
     setCats((prev) => [cat, ...prev])
   }, [])
 
-  return { cats, loading, error, reload: load, addCat }
+  const removeCat = useCallback((id: string) => {
+    setCats((prev) => prev.filter((c) => c.id !== id))
+  }, [])
+
+  const updateCatInList = useCallback((cat: Cat) => {
+    setCats((prev) =>
+      prev.map((c) =>
+        c.id === cat.id ? { ...c, title: cat.title, hdbBlock: cat.hdbBlock, town: cat.town } : c,
+      ),
+    )
+  }, [])
+
+  return { cats, loading, error, reload: load, addCat, removeCat, updateCatInList }
 }

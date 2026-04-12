@@ -51,13 +51,6 @@ module "iam" {
   dynamodb_table_arn = module.database.table_arn
 }
 
-module "frontend" {
-  source                = "../../modules/frontend"
-  project               = local.project
-  environment           = local.environment
-  basic_auth_credential = var.basic_auth_credential
-}
-
 module "github_oidc" {
   source               = "../../modules/github_oidc"
   project              = local.project

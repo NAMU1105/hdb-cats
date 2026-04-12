@@ -47,8 +47,26 @@ export async function createCat(payload: CreateCatRequest, token: string): Promi
   })
 }
 
-export async function deleteCat(id: string): Promise<void> {
-  await request<void>(`/cats/${id}`, { method: 'DELETE' })
+export interface UpdateCatRequest {
+  title?: string
+  description?: string
+  hdbBlock?: string
+  town?: string
+}
+
+export async function updateCat(id: string, payload: UpdateCatRequest, token: string): Promise<Cat> {
+  return request<Cat>(`/cats/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function deleteCat(id: string, token: string): Promise<void> {
+  await request<void>(`/cats/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
 }
 
 export async function uploadToS3(url: string, file: Blob, contentType: string): Promise<void> {

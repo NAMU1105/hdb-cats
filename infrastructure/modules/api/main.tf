@@ -5,6 +5,7 @@ locals {
     create_cat     = { name = "createCat",     zip = "${path.module}/../../../backend/dist/createCat/index.js.zip" }
     get_upload_url = { name = "getUploadUrl",  zip = "${path.module}/../../../backend/dist/getUploadUrl/index.js.zip" }
     delete_cat     = { name = "deleteCat",     zip = "${path.module}/../../../backend/dist/deleteCat/index.js.zip" }
+    update_cat     = { name = "updateCat",     zip = "${path.module}/../../../backend/dist/updateCat/index.js.zip" }
   }
 
   env_vars = {
@@ -47,6 +48,12 @@ data "archive_file" "delete_cat" {
   type        = "zip"
   source_file = "${path.module}/../../../backend/dist/deleteCat/index.js"
   output_path = "${path.module}/../../../backend/dist/deleteCat/index.js.zip"
+}
+
+data "archive_file" "update_cat" {
+  type        = "zip"
+  source_file = "${path.module}/../../../backend/dist/updateCat/index.js"
+  output_path = "${path.module}/../../../backend/dist/updateCat/index.js.zip"
 }
 
 # Lambda functions
@@ -110,6 +117,18 @@ resource "aws_lambda_function" "delete_cat" {
   environment { variables = local.env_vars }
 }
 
+resource "aws_lambda_function" "update_cat" {
+  function_name    = "${var.project}-updateCat-${var.environment}"
+  role             = var.lambda_role_arn
+  handler          = "index.handler"
+  runtime          = "nodejs20.x"
+  filename         = data.archive_file.update_cat.output_path
+  source_code_hash = data.archive_file.update_cat.output_base64sha256
+  timeout          = 10
+  memory_size      = 256
+  environment { variables = local.env_vars }
+}
+
 # CloudWatch Log Group for API Gateway access logs
 resource "aws_cloudwatch_log_group" "api_gw" {
   name              = "/aws/apigateway/${var.project}-${var.environment}"
@@ -123,7 +142,7 @@ resource "aws_apigatewayv2_api" "main" {
 
   cors_configuration {
     allow_origins = [var.allowed_origin == "*" ? "*" : var.allowed_origin, "http://localhost:5173"]
-    allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
     allow_headers = ["Content-Type", "Authorization", "X-Admin-Key"]
     max_age       = 3600
   }
@@ -191,6 +210,13 @@ resource "aws_apigatewayv2_integration" "delete_cat" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "update_cat" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.update_cat.invoke_arn
+  payload_format_version = "2.0"
+}
+
 # Routes
 resource "aws_apigatewayv2_route" "get_cats" {
   api_id    = aws_apigatewayv2_api.main.id
@@ -220,6 +246,12 @@ resource "aws_apigatewayv2_route" "delete_cat" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "DELETE /cats/{id}"
   target    = "integrations/${aws_apigatewayv2_integration.delete_cat.id}"
+}
+
+resource "aws_apigatewayv2_route" "update_cat" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "PATCH /cats/{id}"
+  target    = "integrations/${aws_apigatewayv2_integration.update_cat.id}"
 }
 
 # Lambda permissions for API Gateway
@@ -259,6 +291,14 @@ resource "aws_lambda_permission" "delete_cat" {
   statement_id  = "AllowAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.delete_cat.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "update_cat" {
+  statement_id  = "AllowAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.update_cat.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

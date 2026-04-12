@@ -9,10 +9,3 @@ variable "admin_api_key" {
   sensitive   = true
   default     = ""
 }
-
-variable "basic_auth_credential" {
-  description = "Base64-encoded user:password to protect the frontend (run: echo -n 'user:pass' | base64)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}

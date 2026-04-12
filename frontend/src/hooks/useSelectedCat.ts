@@ -20,5 +20,9 @@ export function useSelectedCat() {
     setSelectedCat(null)
   }, [])
 
-  return { selectedCat, loadingCat, selectCat, clearSelectedCat }
+  const updateSelectedCat = useCallback((cat: Cat) => {
+    setSelectedCat(cat)
+  }, [])
+
+  return { selectedCat, loadingCat, selectCat, clearSelectedCat, updateSelectedCat }
 }
