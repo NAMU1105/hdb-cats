@@ -21,9 +21,21 @@ resource "aws_dynamodb_table" "cats" {
     type = "S"
   }
 
+  attribute {
+    name = "userId"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "TownIndex"
     hash_key        = "town"
+    range_key       = "uploadedAt"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "UserIndex"
+    hash_key        = "userId"
     range_key       = "uploadedAt"
     projection_type = "ALL"
   }

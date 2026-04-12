@@ -8,6 +8,7 @@ locals {
     update_cat     = { name = "updateCat",     zip = "${path.module}/../../../backend/dist/updateCat/index.js.zip" }
     toggle_like    = { name = "toggleLike",    zip = "${path.module}/../../../backend/dist/toggleLike/index.js.zip" }
     add_cat_photo  = { name = "addCatPhoto",   zip = "${path.module}/../../../backend/dist/addCatPhoto/index.js.zip" }
+    get_my_cats    = { name = "getMyCats",     zip = "${path.module}/../../../backend/dist/getMyCats/index.js.zip" }
   }
 
   env_vars = {
@@ -68,6 +69,12 @@ data "archive_file" "add_cat_photo" {
   type        = "zip"
   source_file = "${path.module}/../../../backend/dist/addCatPhoto/index.js"
   output_path = "${path.module}/../../../backend/dist/addCatPhoto/index.js.zip"
+}
+
+data "archive_file" "get_my_cats" {
+  type        = "zip"
+  source_file = "${path.module}/../../../backend/dist/getMyCats/index.js"
+  output_path = "${path.module}/../../../backend/dist/getMyCats/index.js.zip"
 }
 
 # Lambda functions
@@ -162,6 +169,18 @@ resource "aws_lambda_function" "add_cat_photo" {
   runtime          = "nodejs20.x"
   filename         = data.archive_file.add_cat_photo.output_path
   source_code_hash = data.archive_file.add_cat_photo.output_base64sha256
+  timeout          = 10
+  memory_size      = 256
+  environment { variables = local.env_vars }
+}
+
+resource "aws_lambda_function" "get_my_cats" {
+  function_name    = "${var.project}-getMyCats-${var.environment}"
+  role             = var.lambda_role_arn
+  handler          = "index.handler"
+  runtime          = "nodejs20.x"
+  filename         = data.archive_file.get_my_cats.output_path
+  source_code_hash = data.archive_file.get_my_cats.output_base64sha256
   timeout          = 10
   memory_size      = 256
   environment { variables = local.env_vars }
@@ -278,6 +297,13 @@ resource "aws_apigatewayv2_integration" "add_cat_photo" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "get_my_cats" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_my_cats.invoke_arn
+  payload_format_version = "2.0"
+}
+
 # Routes
 resource "aws_apigatewayv2_route" "get_cats" {
   api_id    = aws_apigatewayv2_api.main.id
@@ -325,6 +351,12 @@ resource "aws_apigatewayv2_route" "add_cat_photo" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "POST /cats/{id}/photos"
   target    = "integrations/${aws_apigatewayv2_integration.add_cat_photo.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_my_cats" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /cats/me"
+  target    = "integrations/${aws_apigatewayv2_integration.get_my_cats.id}"
 }
 
 # Lambda permissions for API Gateway
@@ -388,6 +420,14 @@ resource "aws_lambda_permission" "add_cat_photo" {
   statement_id  = "AllowAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.add_cat_photo.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "get_my_cats" {
+  statement_id  = "AllowAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_my_cats.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

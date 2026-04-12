@@ -1,7 +1,8 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import type { Cat } from './types'
 import { SingaporeMap } from './components/Map/SingaporeMap'
 import { CatDetailSidebar } from './components/Sidebar/CatDetailSidebar'
+import { MyCatsPanel } from './components/MyCats/MyCatsPanel'
 import { UploadModal } from './components/Upload/UploadModal'
 import { LoginButton } from './components/Auth/LoginButton'
 import { useCats } from './hooks/useCats'
@@ -11,6 +12,7 @@ import { useAuth } from './contexts/AuthContext'
 
 export default function App() {
   const { user } = useAuth()
+  const [myCatsOpen, setMyCatsOpen] = useState(false)
   const { cats, loading: catsLoading, addCat, removeCat, updateCatInList } = useCats()
   const { selectedCat, loadingCat, selectCat, clearSelectedCat, updateSelectedCat } = useSelectedCat()
 
@@ -78,6 +80,15 @@ export default function App() {
               {cats.length} {cats.length === 1 ? 'cat' : 'cats'} spotted
             </div>
           )}
+          {user && (
+            <button
+              onClick={() => setMyCatsOpen(true)}
+              className="flex items-center gap-1.5 bg-white/20 text-white px-3 py-1.5 rounded-full text-sm font-medium hover:bg-white/30 transition-colors"
+            >
+              <span>🐾</span>
+              <span>My Cats</span>
+            </button>
+          )}
           <LoginButton />
           <button
             onClick={user ? upload.openModal : undefined}
@@ -111,6 +122,13 @@ export default function App() {
           onUpdated={handleUpdated}
         />
       </div>
+
+      {/* My Cats panel */}
+      <MyCatsPanel
+        open={myCatsOpen}
+        onClose={() => setMyCatsOpen(false)}
+        onSelectCat={selectCat}
+      />
 
       {/* Upload modal */}
       <UploadModal

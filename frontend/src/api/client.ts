@@ -28,6 +28,13 @@ export async function fetchCats(town?: string): Promise<CatListItem[]> {
   return data.items
 }
 
+export async function fetchMyCats(token: string): Promise<CatListItem[]> {
+  const data = await request<GetCatsResponse>('/cats/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return data.items
+}
+
 export async function fetchCat(id: string, token?: string): Promise<Cat> {
   return request<Cat>(`/cats/${id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
 }
