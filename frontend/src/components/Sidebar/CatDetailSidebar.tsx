@@ -285,16 +285,17 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
                   </div>
 
                   {/* Like button */}
-                  <div className="pt-1">
+                  <div className="pt-1 flex items-center gap-3">
                     <button
                       onClick={handleToggleLike}
                       disabled={!user || liking}
                       title={user ? (likedByMe ? 'Unlike' : 'Like') : 'Sign in to like'}
-                      className={`flex items-center gap-1.5 text-sm font-medium transition-colors disabled:cursor-default
+                      className={`flex items-center gap-1.5 text-sm font-medium transition-all
+                        disabled:opacity-40 disabled:cursor-not-allowed
                         ${likedByMe ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
                     >
                       <svg
-                        className={`w-5 h-5 transition-transform ${liking ? 'scale-90' : 'hover:scale-110'}`}
+                        className={`w-5 h-5 transition-transform ${liking ? 'scale-90' : user ? 'hover:scale-110' : ''}`}
                         fill={likedByMe ? 'currentColor' : 'none'}
                         stroke="currentColor"
                         strokeWidth={2}
@@ -308,6 +309,9 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
                       </svg>
                       <span>{likeCount}</span>
                     </button>
+                    {!user && (
+                      <span className="text-xs text-gray-400">Sign in to like</span>
+                    )}
                   </div>
                 </>
               )}
