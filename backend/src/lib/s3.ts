@@ -27,12 +27,15 @@ export async function createPresignedPutUrl(
   if (fileSizeBytes > MAX_FILE_BYTES) {
     throw new Error(`File too large: max ${MAX_FILE_BYTES} bytes`)
   }
-  // Do not include ContentLength — it becomes part of the signature and causes
-  // 403s when the browser's Content-Length header doesn't match exactly.
+  // ContentLength is part of the signature — S3 will reject requests where the
+  // actual Content-Length doesn't match, bounding uploads to exactly the declared size.
+  // The frontend must send fetch({ body: file }) with the same file.size value it
+  // passed to getUploadUrl; browsers always set Content-Length to the body size.
   const command = new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     ContentType: contentType,
+    ContentLength: fileSizeBytes,
   })
   return getSignedUrl(s3, command, { expiresIn: URL_TTL_SECONDS })
 }

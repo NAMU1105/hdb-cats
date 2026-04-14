@@ -46,6 +46,7 @@ export interface UploadUrlRequest {
   filename: string
   contentType: string
   fileSizeBytes: number
+  thumbSizeBytes: number
   catId?: string  // pass to add a photo to an existing cat
 }
 

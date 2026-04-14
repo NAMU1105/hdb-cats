@@ -137,15 +137,15 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
     setError(null)
     setUploadProgress(10)
     try {
+      // Generate thumb first so we know its size before requesting the presigned URL
+      const thumb = await resizeImage(file, 400)
+      setUploadProgress(20)
+
       const urls = await getUploadUrl(
-        { filename: file.name, contentType: file.type, fileSizeBytes: file.size, catId: cat.id },
+        { filename: file.name, contentType: file.type, fileSizeBytes: file.size, thumbSizeBytes: thumb.size, catId: cat.id },
         user.credential,
       )
-      setUploadProgress(30)
-
-      // Generate thumb by resizing client-side using a canvas
-      const thumb = await resizeImage(file, 400)
-      setUploadProgress(40)
+      setUploadProgress(35)
 
       await uploadToS3(urls.uploadUrl, file, file.type)
       setUploadProgress(70)

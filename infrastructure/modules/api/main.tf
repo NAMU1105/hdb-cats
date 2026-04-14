@@ -241,7 +241,14 @@ resource "aws_apigatewayv2_stage" "v1" {
     throttling_rate_limit  = 10
   }
 
-  depends_on = [aws_apigatewayv2_route.toggle_like]
+  # Upload-url generates S3 presigned URLs — limit tightly to reduce storage abuse
+  route_settings {
+    route_key              = "POST /upload-url"
+    throttling_burst_limit = 5
+    throttling_rate_limit  = 2
+  }
+
+  depends_on = [aws_apigatewayv2_route.toggle_like, aws_apigatewayv2_route.get_upload_url]
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw.arn

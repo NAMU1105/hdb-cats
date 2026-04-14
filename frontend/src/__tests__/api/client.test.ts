@@ -112,7 +112,7 @@ describe('getUploadUrl', () => {
     }
     mockFetch.mockResolvedValueOnce(makeResponse(urlResponse))
     const result = await getUploadUrl(
-      { filename: 'cat.jpg', contentType: 'image/jpeg', fileSizeBytes: 500_000 },
+      { filename: 'cat.jpg', contentType: 'image/jpeg', fileSizeBytes: 500_000, thumbSizeBytes: 80_000 },
       'user-token',
     )
     expect(result.catId).toBe('cat-new')

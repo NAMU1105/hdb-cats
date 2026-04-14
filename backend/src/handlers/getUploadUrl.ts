@@ -1,13 +1,17 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Handler } from 'aws-lambda'
 import { ulid } from 'ulid'
+import { GetCommand } from '@aws-sdk/lib-dynamodb'
+import { ddb, PK, TABLE_NAME } from '../lib/dynamo'
 import { BUCKET, buildCdnUrl, createPresignedPutUrl } from '../lib/s3'
 import { err, ok, options } from '../lib/response'
 import { verifyGoogleToken } from '../lib/auth'
+import type { CatItem } from '../types/index'
 
 interface RequestBody {
   filename: string
   contentType: string
   fileSizeBytes: number
+  thumbSizeBytes: number
   catId?: string  // if provided, generates keys under this existing cat (for adding photos)
 }
 
@@ -26,16 +30,28 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
     return err('Invalid JSON body')
   }
 
-  const { filename, contentType, fileSizeBytes, catId: existingCatId } = body
+  const { filename, contentType, fileSizeBytes, thumbSizeBytes, catId: existingCatId } = body
 
-  if (!filename || !contentType || !fileSizeBytes) {
-    return err('filename, contentType, and fileSizeBytes are required')
+  if (!filename || !contentType || !fileSizeBytes || !thumbSizeBytes) {
+    return err('filename, contentType, fileSizeBytes, and thumbSizeBytes are required')
   }
   if (!ALLOWED_TYPES.has(contentType)) {
     return err(`Unsupported content type: ${contentType}`)
   }
   if (typeof fileSizeBytes !== 'number' || fileSizeBytes <= 0 || fileSizeBytes > 10_000_000) {
     return err('fileSizeBytes must be between 1 and 10,000,000')
+  }
+  if (typeof thumbSizeBytes !== 'number' || thumbSizeBytes <= 0 || thumbSizeBytes > 10_000_000) {
+    return err('thumbSizeBytes must be between 1 and 10,000,000')
+  }
+
+  // When adding a photo to an existing cat, verify it exists and is active
+  if (existingCatId) {
+    const existing = await ddb.send(
+      new GetCommand({ TableName: TABLE_NAME, Key: { PK, SK: `CAT#${existingCatId}` } }),
+    )
+    const item = existing.Item as CatItem | undefined
+    if (!item || item.status === 'deleted') return err('Cat not found', 404)
   }
 
   const catId = existingCatId ?? ulid()
@@ -52,8 +68,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyResultV2> =
 
   const [uploadUrl, thumbUploadUrl] = await Promise.all([
     createPresignedPutUrl(imageKey, contentType, fileSizeBytes),
-    // Estimate thumb size as 20% of original for the content-length check
-    createPresignedPutUrl(thumbKey, contentType, Math.max(1024, Math.floor(fileSizeBytes * 0.2))),
+    createPresignedPutUrl(thumbKey, contentType, thumbSizeBytes),
   ])
 
   return ok({

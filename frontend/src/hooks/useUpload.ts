@@ -98,7 +98,7 @@ export function useUpload(onSuccess: (cat: Cat) => void) {
       // Step 2: get presigned URLs
       updateState({ progress: 25 })
       const { uploadUrl, thumbUploadUrl, imageKey, thumbKey, catId } = await getUploadUrl(
-        { filename: file.name, contentType, fileSizeBytes: original.size },
+        { filename: file.name, contentType, fileSizeBytes: original.size, thumbSizeBytes: thumb.size },
         user.credential,
       )
 
