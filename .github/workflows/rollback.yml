@@ -4,100 +4,51 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to roll back'
+        description: 'Environment to roll back (uat and prod share the same main branch — this is for documentation only)'
         required: true
         type: choice
         options: [uat, prod]
       git_sha:
-        description: 'Git SHA to roll back to (e.g. abc1234). Find it in the Actions deploy history.'
+        description: 'Roll back TO this commit SHA (all commits after this will be reverted)'
         required: true
         type: string
 
 permissions:
-  id-token: write
-  contents: read
+  contents: write  # needed to push the revert commit
 
 jobs:
-  rollback-backend:
-    name: Rollback backend → ${{ inputs.environment }}
+  revert:
+    name: Revert main to ${{ inputs.git_sha }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     steps:
-      - name: Checkout target SHA
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.git_sha }}
+          ref: main
+          # Use a PAT or the default GITHUB_TOKEN with write permission
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - run: npm ci
-      - run: npm run build --workspace=backend
-
-      - uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ap-southeast-1
-
-      - name: Redeploy Lambda functions from ${{ inputs.git_sha }}
-        working-directory: backend/dist
+      - name: Configure git identity
         run: |
-          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto getMyCats deletePhoto; do
-            zip -j ${handler}.zip ${handler}/index.js
-            aws lambda update-function-code \
-              --function-name hdb-cats-${handler}-${{ inputs.environment }} \
-              --zip-file fileb://${handler}.zip \
-              --no-cli-pager
-          done
-          echo "✅ Backend rolled back to ${{ inputs.git_sha }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-  rollback-frontend:
-    name: Rollback frontend → ${{ inputs.environment }}
-    needs: rollback-backend
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    steps:
-      - name: Checkout target SHA
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.git_sha }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - run: npm ci
-
-      - name: Build frontend from ${{ inputs.git_sha }}
-        run: npm run build --workspace=frontend
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_CLOUDFRONT_DOMAIN: ${{ secrets.VITE_CLOUDFRONT_DOMAIN }}
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-
-      - uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ap-southeast-1
-
-      - name: Sync rolled-back build to S3
+      - name: Validate target SHA exists
         run: |
-          aws s3 sync frontend/dist s3://${{ secrets.FRONTEND_BUCKET }} \
-            --delete \
-            --cache-control "public,max-age=31536000,immutable" \
-            --exclude "index.html"
-          aws s3 cp frontend/dist/index.html s3://${{ secrets.FRONTEND_BUCKET }}/index.html \
-            --cache-control "no-cache,no-store,must-revalidate"
+          git cat-file -e ${{ inputs.git_sha }}^{commit} \
+            || (echo "❌ SHA ${{ inputs.git_sha }} not found" && exit 1)
 
-      - name: Invalidate CloudFront cache
+      - name: Revert all commits after target SHA
         run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*" \
-            --no-cli-pager
-          echo "✅ Frontend rolled back to ${{ inputs.git_sha }}"
+          # Revert every commit between target SHA (exclusive) and HEAD (inclusive),
+          # newest first, without creating individual commits per revert.
+          git revert --no-commit ${{ inputs.git_sha }}..HEAD
+
+      - name: Commit and push revert
+        run: |
+          git commit -m "revert: roll back to ${{ inputs.git_sha }} (${{ inputs.environment }})
+
+          Reverts all commits after ${{ inputs.git_sha }}.
+          Triggered manually via rollback workflow."
+          git push origin main
+          echo "✅ Revert commit pushed — deploy workflow will handle the rest"
