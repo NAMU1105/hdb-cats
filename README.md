@@ -56,6 +56,8 @@ hdb-cats/
 - **Like / unlike** — heart button on each sighting (login required); rate-limited to prevent spam
 - **Share** — share link button copies a direct URL (`?cat=<id>`) or triggers native share sheet on mobile
 - **Edit / Delete** — owners can edit metadata or delete their own sightings
+- **Delete individual photo** — cat owner or photo uploader can remove a specific photo (last photo protected)
+- **My Cats** — slide-in panel listing your own sightings; click any entry to jump to it on the map
 - Presigned S3 upload (images go directly from browser to S3, no size limit from Lambda)
 - Soft-delete with `X-Admin-Key` header for moderation
 
@@ -108,17 +110,37 @@ dev and uat frontends are protected by HTTP Basic Auth (set via `TF_VAR_basic_au
 
 ## CI/CD
 
-Every push and PR runs:
+Every push and PR runs (`ci.yml`):
 - TypeScript typecheck (backend + frontend)
 - Unit tests with coverage (Vitest)
 - Terraform security scan (tfsec)
 - SonarCloud analysis
+- Playwright E2E tests against local dev server (push to `main` only)
 
-Push to `main` additionally runs Playwright E2E tests.
+Deployments are handled by `deploy.yml` using AWS OIDC (no long-lived credentials stored).  
+**Unit tests must pass before any deployment proceeds** (test gate job).
 
-Deployments are handled by GitHub Actions using AWS OIDC (no long-lived credentials stored):
-- Push to `develop` → deploy to **dev**
-- Push to `main` → deploy to **uat**, then wait for manual approval → deploy to **prod**
+```
+push to main
+  └── test (unit test gate)
+        └── deploy-uat-backend
+              └── deploy-uat-frontend
+                    └── e2e-uat  ← Playwright against live UAT URL
+                          └── deploy-prod-backend  ← manual approval required
+                                └── deploy-prod-frontend
+```
+
+- Push to `develop` → deploy to **dev** (after test gate)
+- Push to `main` → deploy to **uat** → E2E against UAT → manual approval → deploy to **prod**
+
+### Rollback
+
+Go to **GitHub → Actions → Rollback → Run workflow**, enter:
+- `environment`: `uat` or `prod`
+- `git_sha`: the commit to roll back to
+
+The workflow creates a `git revert` commit on `main` and pushes it.  
+The deploy pipeline then runs automatically — `main` always stays in sync with what is deployed.
 
 ## Deployment
 
@@ -149,6 +171,8 @@ Terraform outputs the values needed for GitHub Secrets:
 
 Set these in **GitHub → Settings → Environments** (separately for `dev`, `uat`, `prod`). Add required reviewers to `prod` to enable the manual approval gate.
 
+Also add `BASE_URL` to the **`uat`** environment secrets — this is the frontend CloudFront URL that Playwright uses for E2E tests against the live UAT deployment.
+
 ### prod uses a locked-down CORS origin
 
 Pass the frontend CloudFront domain when applying prod:
@@ -170,8 +194,10 @@ terraform apply
 | `PATCH` | `/v1/cats/{id}` | Google ID token (owner only) | Update title / description / location metadata |
 | `DELETE` | `/v1/cats/{id}` | Google ID token (owner) or `X-Admin-Key` | Soft-delete |
 | `POST` | `/v1/cats/{id}/photos` | Google ID token | Add a photo to an existing sighting |
+| `GET` | `/v1/cats/me` | Google ID token | List authenticated user's own sightings |
 | `POST` | `/v1/cats/{id}/like` | Google ID token | Toggle like (rate-limited: 10 req/s, burst 20) |
-| `POST` | `/v1/upload-url` | Google ID token | Get presigned S3 PUT URLs (pass `catId` to add photo to existing cat) |
+| `DELETE` | `/v1/cats/{id}/photos/{index}` | Google ID token (cat owner or photo uploader) | Delete a specific photo |
+| `POST` | `/v1/upload-url` | Google ID token | Get presigned S3 PUT URLs; rate-limited (burst 5, rate 2/s) |
 
 ## Map Notes
 
