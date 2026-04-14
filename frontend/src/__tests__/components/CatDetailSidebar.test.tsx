@@ -48,6 +48,7 @@ const MOCK_CAT: Cat = {
   thumbUrl: 'https://cdn/thumb.jpg',
   uploadedAt: '2026-04-12T00:00:00Z',
   status: 'active',
+  userId: 'user-1',
   likeCount: 3,
   likedByMe: false,
   photos: [

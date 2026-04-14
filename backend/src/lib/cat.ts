@@ -30,6 +30,7 @@ export function toCatPublic(item: CatItem, likeCount?: number, likedByMe?: boole
     thumbUrl: photos[0].thumbUrl,
     uploadedAt: item.uploadedAt,
     status: item.status,
+    userId: item.userId,
     likeCount: likeCount ?? item.likeCount ?? 0,
     likedByMe,
     photos,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { updateCat, deleteCat, toggleLike, addCatPhoto, getUploadUrl, uploadToS3 } from '../../api/client'
+import { updateCat, deleteCat, toggleLike, addCatPhoto, deletePhoto, getUploadUrl, uploadToS3 } from '../../api/client'
 import { PhotoLightbox } from './PhotoLightbox'
 import type { Cat } from '../../types'
 
@@ -43,6 +43,7 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
   const [photoIndex, setPhotoIndex] = useState(0)
   const [addingPhoto, setAddingPhoto] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [deletingPhoto, setDeletingPhoto] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -60,6 +61,7 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
       setLikedByMe(cat.likedByMe ?? false)
       setPhotoIndex(0)
       setAddingPhoto(false)
+      setDeletingPhoto(false)
       setLightboxOpen(false)
     }
   }, [cat?.id])
@@ -162,6 +164,22 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
     }
   }
 
+  const handleDeletePhoto = async (index: number) => {
+    if (!cat || !user) return
+    setDeletingPhoto(true)
+    setError(null)
+    try {
+      const updated = await deletePhoto(cat.id, index, user.credential)
+      onUpdated(updated)
+      // If we deleted the last photo in the list, step back
+      setPhotoIndex((i) => Math.min(i, updated.photos.length - 1))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete photo')
+    } finally {
+      setDeletingPhoto(false)
+    }
+  }
+
   const photos = cat?.photos ?? (cat ? [{ cdnUrl: cat.cdnUrl, thumbUrl: cat.thumbUrl, uploadedAt: cat.uploadedAt, userId: '', s3Key: '', thumbKey: '' }] : [])
   const currentPhoto = photos[photoIndex]
   const photoCount = photos.length
@@ -230,6 +248,28 @@ export function CatDetailSidebar({ cat, loading, onClose, onDeleted, onUpdated }
                   className="w-full aspect-square object-cover cursor-zoom-in"
                   onClick={() => setLightboxOpen(true)}
                 />
+
+                {/* Delete photo button — cat owner or photo uploader, only when 2+ photos exist */}
+                {user && photoCount > 1 && (cat.userId === user.userId || currentPhoto.userId === user.userId) && (
+                  <button
+                    onClick={() => void handleDeletePhoto(photoIndex)}
+                    disabled={deletingPhoto}
+                    className="absolute top-2 right-2 bg-black/50 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors disabled:opacity-50"
+                    aria-label="Delete this photo"
+                    title="Delete this photo"
+                  >
+                    {deletingPhoto ? (
+                      <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
+                )}
 
                 {/* Photo navigation — only shown when there are multiple photos */}
                 {photoCount > 1 && (

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -48,7 +48,7 @@ describe('LoginButton — logged out', () => {
 })
 
 describe('LoginButton — logged in', () => {
-  const fakeUser = { credential: 'token', name: 'Cat Fan', email: 'cat@hdb.sg', picture: undefined }
+  const fakeUser = { credential: 'token', userId: 'user-1', name: 'Cat Fan', email: 'cat@hdb.sg', picture: undefined }
 
   beforeEach(() => {
     vi.mocked(useAuth).mockReturnValue({ user: fakeUser, login: mockLogin, logout: mockLogout })

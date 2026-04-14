@@ -7,22 +7,23 @@ vi.mock('@react-oauth/google', () => ({
   googleLogout: vi.fn(),
 }))
 
-// A simple button component that exercises the auth context
-function AuthTestHarness() {
-  const { user, login, logout } = useAuth()
-  return (
-    <div>
-      <span data-testid="status">{user ? `logged-in:${user.email}` : 'logged-out'}</span>
-      <button onClick={() => login('fake-credential', 'Cat Fan', 'cat@hdb.sg')}>Login</button>
-      <button onClick={logout}>Logout</button>
-    </div>
-  )
-}
-
 function buildFakeToken(payload: object, exp = Math.floor(Date.now() / 1000) + 3600) {
   const header = btoa(JSON.stringify({ alg: 'RS256' }))
   const claims = btoa(JSON.stringify({ ...payload, exp }))
   return `${header}.${claims}.fake-signature`
+}
+
+// A simple button component that exercises the auth context
+function AuthTestHarness() {
+  const { user, login, logout } = useAuth()
+  const fakeToken = buildFakeToken({ sub: 'u1' })
+  return (
+    <div>
+      <span data-testid="status">{user ? `logged-in:${user.email}` : 'logged-out'}</span>
+      <button onClick={() => login(fakeToken, 'Cat Fan', 'cat@hdb.sg')}>Login</button>
+      <button onClick={logout}>Logout</button>
+    </div>
+  )
 }
 
 describe('AuthContext', () => {

@@ -97,6 +97,13 @@ export async function addCatPhoto(id: string, imageKey: string, thumbKey: string
   })
 }
 
+export async function deletePhoto(catId: string, photoIndex: number, token: string): Promise<Cat> {
+  return request<Cat>(`/cats/${catId}/photos/${photoIndex}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export async function uploadToS3(url: string, file: Blob, contentType: string): Promise<void> {
   const res = await fetch(url, {
     method: 'PUT',

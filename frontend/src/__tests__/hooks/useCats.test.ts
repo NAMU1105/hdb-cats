@@ -73,6 +73,7 @@ describe('useCats', () => {
       imageKey: '',
       cdnUrl: '',
       status: 'active' as const,
+      userId: 'user-1',
       likeCount: 0,
       photos: [],
     } as Cat

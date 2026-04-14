@@ -20,6 +20,7 @@ export interface Cat {
   thumbUrl: string
   uploadedAt: string
   status: 'active' | 'flagged' | 'deleted'
+  userId: string
   likeCount: number
   likedByMe?: boolean
   photos: Photo[]

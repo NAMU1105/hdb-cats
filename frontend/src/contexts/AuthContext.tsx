@@ -3,6 +3,7 @@ import { googleLogout } from '@react-oauth/google'
 
 interface User {
   credential: string
+  userId: string   // decoded sub claim from the ID token
   name?: string
   email?: string
   picture?: string
@@ -40,7 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     (credential: string, name?: string, email?: string, picture?: string) => {
-      const u = { credential, name, email, picture }
+      const payload = JSON.parse(atob(credential.split('.')[1])) as { sub: string }
+      const u = { credential, userId: payload.sub, name, email, picture }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(u))
       setUser(u)
     },
