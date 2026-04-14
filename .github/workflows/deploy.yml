@@ -10,11 +10,33 @@ permissions:
   contents: read
 
 jobs:
+  # ── GATE: unit tests must pass before any deployment ───────────────────────
+
+  test:
+    name: Unit tests (gate)
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck --workspace=backend
+      - run: npm run test --workspace=backend
+      - run: npm run typecheck --workspace=frontend
+      - run: npm run test --workspace=frontend
+
   # ── DEV (push to develop) ───────────────────────────────────────────────────
 
   deploy-dev-backend:
     name: Deploy backend → dev
     if: github.ref == 'refs/heads/develop'
+    needs: [test]
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -37,7 +59,7 @@ jobs:
       - name: Update Lambda functions
         working-directory: backend/dist
         run: |
-          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto; do
+          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto getMyCats deletePhoto; do
             zip -j ${handler}.zip ${handler}/index.js
             aws lambda update-function-code \
               --function-name hdb-cats-${handler}-dev \
@@ -50,6 +72,7 @@ jobs:
   deploy-uat-backend:
     name: Deploy backend → uat
     if: github.ref == 'refs/heads/main'
+    needs: [test]
     runs-on: ubuntu-latest
     environment: uat
     steps:
@@ -72,7 +95,7 @@ jobs:
       - name: Update Lambda functions
         working-directory: backend/dist
         run: |
-          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto; do
+          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto getMyCats deletePhoto; do
             zip -j ${handler}.zip ${handler}/index.js
             aws lambda update-function-code \
               --function-name hdb-cats-${handler}-uat \
@@ -125,12 +148,49 @@ jobs:
             --paths "/*" \
             --no-cli-pager
 
-  # ── PROD (push to main → after UAT → manual approval) ──────────────────────
+  # ── E2E against UAT — must pass before prod is unlocked ────────────────────
+
+  e2e-uat:
+    name: E2E tests → uat
+    if: github.ref == 'refs/heads/main'
+    needs: deploy-uat-frontend
+    runs-on: ubuntu-latest
+    environment: uat
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests against UAT
+        run: npm run test:e2e
+        env:
+          # Point Playwright at the live UAT deployment — no dev server is started
+          BASE_URL: ${{ secrets.UAT_BASE_URL }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-uat
+          path: playwright-report/
+          retention-days: 7
+
+  # ── PROD (push to main → after UAT E2E → manual approval) ──────────────────
 
   deploy-prod-backend:
     name: Deploy backend → prod
     if: github.ref == 'refs/heads/main'
-    needs: deploy-uat-frontend
+    needs: e2e-uat
     runs-on: ubuntu-latest
     environment: prod
     steps:
@@ -153,7 +213,7 @@ jobs:
       - name: Update Lambda functions
         working-directory: backend/dist
         run: |
-          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto; do
+          for handler in getCats getCat createCat getUploadUrl deleteCat updateCat toggleLike addCatPhoto getMyCats deletePhoto; do
             zip -j ${handler}.zip ${handler}/index.js
             aws lambda update-function-code \
               --function-name hdb-cats-${handler}-prod \

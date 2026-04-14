@@ -8,7 +8,9 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
 
   use: {
-    baseURL: 'http://localhost:5173',
+    // BASE_URL is set in CI when running against a real deployment (e.g. UAT).
+    // Falls back to the local dev server for local runs and PR checks.
+    baseURL: process.env.BASE_URL ?? 'http://localhost:5173',
     trace: 'on-first-retry',
   },
 
@@ -19,8 +21,9 @@ export default defineConfig({
     },
   ],
 
-  // Start the dev server automatically before tests run
-  webServer: {
+  // Only spin up the dev server when NOT pointing at a real deployment.
+  // When BASE_URL is set the tests hit the already-deployed environment directly.
+  webServer: process.env.BASE_URL ? undefined : {
     command: 'npm run dev --workspace=frontend',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
